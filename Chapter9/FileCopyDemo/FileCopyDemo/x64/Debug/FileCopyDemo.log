@@ -1,0 +1,4 @@
+﻿  FileCopyDemo.cpp
+F:\Source\Windows\Chapter19\FileCopyDemo\FileCopyDemo\FileCopyDemo.cpp(48,39): warning C4244: “参数”: 从“SIZE_T”转换到“DWORD”，可能丢失数据
+F:\Source\Windows\Chapter19\FileCopyDemo\FileCopyDemo\FileCopyDemo.cpp(59,40): warning C4244: “参数”: 从“SIZE_T”转换到“DWORD”，可能丢失数据
+  FileCopyDemo.vcxproj -> F:\Source\Windows\Chapter19\FileCopyDemo\x64\Debug\FileCopyDemo.exe

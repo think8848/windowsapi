@@ -1,0 +1,1 @@
+Admin：你好，欢迎进入个人中心！<br/><a href='logout.php'>注销</a>

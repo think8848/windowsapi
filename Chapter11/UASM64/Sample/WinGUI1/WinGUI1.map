@@ -1,0 +1,94 @@
+JWlink Version 1.9beta 13
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       17/05/15 11:54:04
+Executable Image: .\WinGUI1.exe
+creating a 64-bit PE executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+.rdata                          00402000             000002b7
+.pdata                          00403000             0000003c
+DGROUP                          00404000             00000014
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+.text                  CODE           AUTO           00401000        00000308
+.xdata                 CONST          .rdata         00402000        00000030
+.rdata                 CONST          .rdata         00402030        0000000d
+.idata                 CONST          .rdata         00402040        00000277
+.pdata                 CONST          .pdata         00403000        0000003c
+.data                  DATA           DGROUP         00404000        00000014
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: .\WinGUI1.obj(WinGUI1.ASM)
+00401000*      OnCommand
+00401038*      WndProc
+00401157*      InitApplication
+0040126f*      WinMain
+004012d0+      WinMainCRTStartup
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+ExitProcess                         KERNEL32.dll
+GetModuleHandleA                    KERNEL32.dll
+GetMessageA                         USER32.dll
+DispatchMessageA                    USER32.dll
+PostMessageA                        USER32.dll
+DefWindowProcA                      USER32.dll
+PostQuitMessage                     USER32.dll
+RegisterClassA                      USER32.dll
+CreateWindowExA                     USER32.dll
+ShowWindow                          USER32.dll
+DrawTextA                           USER32.dll
+BeginPaint                          USER32.dll
+EndPaint                            USER32.dll
+InvalidateRect                      USER32.dll
+GetClientRect                       USER32.dll
+LoadCursorA                         USER32.dll
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+C:\JASM64\lib\kernel32.lib
+C:\JASM64\lib\user32.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  00100000 (1048576.)
+Memory size:  060f (1551.)
+Entry point address: 004012d0
+Link time: 00:00.00

@@ -1,0 +1,3013 @@
+comment ^
+
+;; 文本宏的集合
+
+;; 作者： Four-F (four-f@mail.ru)
+;; 最后更新2004年9月1日
+;; 欢迎您的改进、建议和修正
+
+;; 测试了与 windows.inc v.1.25e的兼容性
+STRINGA/STRINGW是内部宏。基本上，你不需要使用它们
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+                       语法
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    MacroName quotedtext [,lebel] [,alignment]
+    or
+    MacroName quotedtext [,alignment] [,lebel]
+
+    $MacroName(quotedtext [,lebel] [,alignment])
+    or
+    $MacroName(quotedtext [,alignment] [,lebel])
+
+----------------------------------------------------------------------------------------------------
+
+- MacroName / $MacroName语法用于下列表：
+TA / TW / T
+CTA / CTW / CT
+
+$TA / $TW / $T
+$CTA / $CTW / $CT
+
+TA0 / TW0 / T0
+CTA0  / CTW0 / CT0
+
+$TA0 / $TW0 / $T0
+$CTA0 / $CTW0 / $CT0
+
+T – 所有名称带字母T的宏。意味着它是文本。
+C - 常量字符串。字符串的定义是在只读数据段（.const）。
+???? 没有的'C'在其名称中的宏定义在读写数据段的字符串（.data）。
+A - 宏定义的ASCII字符串。
+W - 宏定义宽（Unicode）的字符串。每个字的大小是2个字节。
+0 - 零字符不是'O'。定义的字符串是终止零字节（ASCII）或零的字码（Unicode）结束。
+$ - 宏函数。返回定义文本的偏移。
+每一个宏都有相应的宏函数，该函数在宏只前加’$’
+
+所有的宏函数都返回定义文本的偏移地址
+所有宏定义都不返回任何值
+
+如果宏的名称不包含字母'A'或'W’，其行为取决于全局变量UNICODE的定义。
+如果UNICODE是未定义或等于0，即宏定义为ASCII字符串。
+如果UNICODE被定义并且不等于0，即宏定义为Unicode字符串。
+
+你可以通过两种方式定义全局变量
+    -在ml.exe的命令行使用
+        \UNICODE=1
+    -在源文件里使用
+        UNICODE = 1
+            or
+        UNICODE equ 1
+----------------------------------------------------------------------------------------------------
+（我们来解释一下语法中提到的参数）
+-quotedtext：
+
+第一个参数是你想定义的文本字符串.
+它需要被引号标记
+
+你可以使用转义字符
+
+    esc. char.     code         symbol
+    --------------------------------------------------
+        \:         21h            '!'
+        \{         28h            '('
+        \}         29h            ')'
+        \[         3Ch            '<'
+        \]         3Eh            '>'
+        \=         22h            '"'
+        \-         27h            "'"
+        \\         5Ch            '\'
+        \*          -              -   ;; To workaround "CopyFile" -> CopyFileA problem
+        \0          0             zero byte/word
+        \a          7             alert (BEL)
+        \b          8             backspace
+        \t          9             horizontal tabulation
+        \n         0Dh, 0Ah       new line
+        \l         0Ah            line feed
+        \v         0Bh            verticalal tabulation
+        \f         0Ch            formfeed
+        \r         0Dh            carrige return
+
+----------------------------------------------------------------------------------------------------
+
+-lebel, alignment:
+
+第二和第三个参数是可选的
+它可以被标记和对齐
+这些宏可以识别标记符号和自动对齐
+
+后面你可以通过标记识别被定义文本
+
+对齐方式可以立即值1（字节），2（字）或4（双字）。
+通过默认对齐方式是：
+????- 1 ASCII字符串
+????- 2 Unicode字符串
+结构体UNICODE_STRING，总是4字节对齐的通过下面这些宏来定义
+COUNTED_UNICODE_STRING / $COUNTED_UNICODE_STRING / CCOUNTED_UNICODE_STRING / $CCOUNTED_UNICODE_STRING
+你可以设置字符串指针所指向的字符串的对齐方式。
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:                 消除重复字符串
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+下面的宏试图消除重复的字符串。因此，相同的字符串只有单个副本
+这将反应在程序映像上，产生更小的程序
+
+$TA / $CTA / $TW / $CTW / $T / $CT
+$TA0 / $CTA0 / $TW0 / $CTW0 / $T0 / $CT0
+
+每次你使用上面的宏来定义字符串，字符串都将被定义在数据段
+如果一个地方在后面的代码使用相同的宏定义相同内容的字符串，宏
+会记住它的偏移量，而不是定义它第二次数据库。
+
+
+看这个例子.
+
+invoke MessageBox, NULL, $CTA0("OK"), $CTA0("Success"), MB_OK
+. . .
+invoke MessageBox, NULL, $CTA0("OK"), $CTA0("Success"), MB_OK
+如果您使用此代码,上述两个字符串编译为
+.const
+szOK      db "OK", 0
+szSuccess db "Success", 0
+.code
+invoke MessageBox, NULL, addr szOK, addr szSuccess, MB_OK
+. . .
+invoke MessageBox, NULL, addr szOK, addr szSuccess, MB_OK
+
+
+记住，每一个宏有自己的数据段。
+因此，例如，$ CTA0只搜索以前定义的字符串中相同内容的宏！
+
+这种优化只适用于无标记字符串。所以，如果你明确地传递标记给向宏，它就不会在自己定义的数据段里搜索相同字符串。
+
+看这个例子：
+
+invoke MessageBox, NULL, $CTA0("OK"), $CTA0("Success"), MB_OK
+. . .
+invoke MessageBox, NULL, $CTA0("OK", szOK), $CTA0("Success", szSuccess), MB_OK
+
+The above two strings are compiled as if you use this code:
+
+.const
+???1      db "OK", 0
+???2      db "Success", 0
+szOK      db "OK", 0
+szSuccess db "Success", 0
+.code
+invoke MessageBox, NULL, addr ???1, addr ???2, MB_OK
+. . .
+invoke MessageBox, NULL, addr szOK, addr szSuccess, MB_OK
+
+
+
+也请记住，如果你明确地传递的对齐值是大于以前的对齐，定义字符串的宏将使用字符串在数据段中对齐后的偏移，并通过消息警告你：
+
+Also remember that if you explicity pass alignment that is greater then the alignment of previously
+defined string the macro will use offset to the string from database and warn you with the message:
+
+mov eax, $CTA0("Alignment", 2)
+mov eax, $CTA0("Alignment", 4)
+
+C:\masm32\macros\xxx.asm(xxx) : $CTA0 macro WARNING! Alignment is greater then
+previous instance of "Alignment".
+
+
+在所有宏之前，可以用这样一行来使得字符串池无效
+
+DISABLE_STRING_POOLING equ 1
+
+注意：您指定的值并不重要。它可以是任何值。所以定义它为0也是可以的。这些宏定义只关心它是否被定义。所以，如果你想再次启用字符串池，只需删除或注释掉DISABLE_STRING_POOLING定义。
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:                   限制                                       :
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+Unicode字符串可以达到47个字符长。否则，你会得到汇编错误：
+????: error A2042: statement too complex
+希望我以后会解决这个问题。
+Unicode zìfú chuàn kěyǐ dádào 47 gè zìfú zhǎng.
+Fǒuzé, nǐ huì dédào huìbiān cuòwù:
+????? : Cuòwù A2042: Yǔjù tài fùzá
+
+Xīwàng wǒ yǐhòu huì jiějué zhège wèntí.
+字典 - 查看字典详细内容
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:                 已知的bug                                      :
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CTA0("CopyFile") 会生成 CopyFileA 这是因为
+CopyFile equ <CopyFileA>
+
+这是因为masm的内部行为.
+
+你可以通过放置’\*’来解决这个问题，比如：
+
+$CTA0("Copy\*File")
+'\*' 转移字符拓展了语句. 因此你能得到"CopyFile" ，而不是 "CopyFileA".
+
+或者你可以使用无法识别的字符转义序列。因为，像这样的例子：
+$CTA0("C\opyFile")
+你将得到 "WARNING!: 'o' : unrecognized character escape sequence" from macro
+但是字节 'o' 将被加到字符串里。因此你能得到"CopyFile" ，而不是 "CopyFileA".
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:                         举例                                            :
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+最有用的宏: $CTA0, $CTW0, CTA0, CTW0
+
+----------------------------------------------------------------------------------------------------
+要定义空字符串使用任何以零终止的宏是这样的：
+    mov eax, $TA0()
+or
+    mov eax, $TA0('')
+or
+    mov eax, $TA0("")
+
+
+DON'T TRY TO DEFINE EMPTY STRINGS WITH NON-ZERO TERMINATING MACROS: 
+TA / TW / T / CTA / CTW / CT / $TA / $TW / $T / $CTA / $CTW / $CT
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::: Ex 1 :::::::::::::::::::::::::::::::::::::::::::::::::
+
+invoke AppendMenu, hMenuPopupFile, MF_STRING, IDM_OPEN, $CTA0("&Open...\tCtrl+O")
+
+    拓展为：:
+
+.const
+??? db "&Open...", 9, "Ctrl+O", 0
+.code
+invoke AppendMenu, hMenuPopupFile, MF_STRING, IDM_OPEN, offset ???
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::: Ex 2 :::::::::::::::::::::::::::::::::::::::::::::::::
+
+TA0 "http://board.win32asmcommunity.net/", szUrl, 4
+invoke MessageBox, NULL, offset szUrl, $TA0("Go To", 4), MB_OK
+
+   拓展为：
+
+.data
+align 4
+szUrl db "http://board.win32asmcommunity.net/", 0
+align 4
+??? db "Go To", 0
+.code
+invoke MessageBox, NULL, offset szUrl, offset ???, MB_OK
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::: Ex 3 :::::::::::::::::::::::::::::::::::::::::::::::::
+
+invoke MessageBox, NULL, $CTA0("\[ Well done\: :-\} \]"), $CTA0("Congratulations"), MB_OK
+
+    拓展为：
+
+.const
+??1 db "< Well done! :-) >", 0
+??2 db "Congratulations", 0
+.code	
+invoke MessageBox, NULL, offset ??1, ??2, MB_OK
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::: Ex 4 :::::::::::::::::::::::::::::::::::::::::::::::::
+
+invoke IoCreateDevice, pDriverObject, 0, \
+			$CCOUNTED_UNICODE_STRING("\\Device\\DevName", g_usDeviceName, 4), \
+			FILE_DEVICE_UNKNOWN, 0, FALSE, addr g_pDeviceObject
+
+
+    拓展为：
+
+
+.const
+align 4
+??? dw "\" ,"D" ,"e" ,"v" ,"i" ,"c" ,"e" ,"\" ,"D" ,"e" ,"v" ,"N" ,"a" ,"m" ,"e" , 0
+align 4	         ; The UNICODE_STRING structure itself is always DWORD alignmented
+g_usDeviceName   dw (sizeof ???) - 2   ; UNICODE_STRING.Length
+                 dw (sizeof ???)       ; UNICODE_STRING.MaximumLength
+                 dd offset ???         ; UNICODE_STRING.Buffer
+.code
+invoke IoCreateDevice, pDriverObject, 0, offset g_usDeviceName, \
+			FILE_DEVICE_UNKNOWN, 0, FALSE, addr g_pDeviceObject
+
+
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:               准备编译的例子
+                          :
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+:::::::::::::::::::::::::::::::::::::: Ready To Compile Ex 1 :::::::::::::::::::::::::::::::::::::::
+
+.386
+.model flat, stdcall
+option casemap:none
+
+include \masm32\include\windows.inc
+
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+
+include \masm32\Macros\Strings.mac
+
+.data
+ms MEMORYSTATUS <>
+buffer db 100 dup(0)
+TA  "Percent of memory in use:\t\t%d\n", szFormat
+TA  "Bytes of physical memory:\t\t%d\n"
+TA  "Free physical memory bytes:\t\t%d\n"
+TA  "Bytes of paging file:\t\t%d\n"
+TA  "Free bytes of paging file:\t\t%d\n"
+TA  "User bytes of address space:\t\t%d\n"
+TA0 "Free user bytes:\t\t\t%d\n"
+
+.code
+start:
+invoke GlobalMemoryStatus, addr ms
+invoke wsprintf, addr buffer, addr szFormat, \
+								ms.dwMemoryLoad, \
+								ms.dwTotalPhys, \
+								ms.dwAvailPhys, \
+								ms.dwTotalPageFile, \
+								ms.dwAvailPageFile, \
+								ms.dwTotalVirtual, \
+								ms.dwAvailVirtual
+invoke MessageBox, NULL, addr buffer, $CTA0("Memory Info"), MB_OK
+invoke ExitProcess, 0
+end start
+
+
+:::::::::::::::::::::::::::::::::::::: Ready To Compile Ex 2 :::::::::::::::::::::::::::::::::::::::
+
+.386
+.model flat, stdcall
+option casemap:none
+
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+include \masm32\Macros\Strings.mac
+
+.code
+start:
+invoke WinHelp, NULL, $CTA0("\\masm32\\help\\masm32.hlp", 4), HELP_CONTENTS, 0
+invoke ExitProcess, 0
+end start
+
+
+:::::::::::::::::::::::::::::::::::::: Ready To Compile Ex 3 :::::::::::::::::::::::::::::::::::::::
+
+.386
+.model flat, stdcall
+option casemap:none
+
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+include \masm32\Macros\Strings.mac
+
+.code
+start:
+invoke MessageBox, NULL, $CTA0("Cool program v1.0\nCopyright ?Cool Coder, 2005"), $CTA0("About"), MB_OK
+invoke ExitProcess, 0
+end start
+
+
+:::::::::::::::::::::::::::::::::::::: Ready To Compile Ex 4 :::::::::::::::::::::::::::::::::::::::
+
+.386
+.model flat, stdcall
+option casemap:none
+
+includelib \masm32\lib\kernel32.lib
+includelib \masm32\lib\user32.lib
+
+include \masm32\Macros\Strings.mac
+
+
+; under NT define 1
+; under w9x define 0
+
+UNICODE = 0
+
+LoadLibraryA proto :DWORD
+LoadLibraryW proto :DWORD
+
+IF UNICODE EQ 1
+	LoadLibrary equ <LoadLibraryW>
+ELSE
+	LoadLibrary equ <LoadLibraryA>
+ENDIF
+
+GetProcAddress proto :DWORD, :DWORD
+ExitProcess proto :DWORD
+MessageBoxA proto :DWORD, :DWORD, :DWORD, :DWORD
+MessageBoxW proto :DWORD, :DWORD, :DWORD, :DWORD
+
+IF UNICODE EQ 1
+	MessageBox equ <MessageBoxW>
+ELSE
+	MessageBox equ <MessageBoxA>
+ENDIF
+
+wsprintfA proto C :DWORD, :DWORD, :VARARG
+wsprintfW proto C :DWORD, :DWORD, :VARARG
+
+IF UNICODE EQ 1
+	wsprintf equ <wsprintfW>
+ELSE
+	wsprintf equ <wsprintfA>
+ENDIF
+
+proto04 TYPEDEF proto :DWORD, :DWORD, :DWORD, :DWORD
+pproto04 TYPEDEF PTR proto04
+
+.data?
+pfnMassageBox	DWORD		?
+hinstUser32		DWORD		?
+buffer			BYTE 32 dup(?)
+
+.code
+start:
+
+invoke LoadLibrary, $CT0("user32.dll", 4)
+mov hinstUser32, eax
+
+;; Exported functions names is always ASCII
+IF UNICODE EQ 1
+	invoke GetProcAddress, hinstUser32, $CTA0("MessageBoxW", 4)
+ELSE
+	invoke GetProcAddress, hinstUser32, $CTA0("MessageBoxA", 4)
+ENDIF
+
+mov pfnMassageBox, eax
+
+invoke wsprintf, addr buffer, $CT0("%08X"), pfnMassageBox
+
+invoke pproto04 ptr [pfnMassageBox], 0, addr buffer, $CT0("MessageBox", 4), 0
+
+invoke ExitProcess, 0
+
+end start
+
+
+^
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+;;IFDEF UNICODE
+;;	UNICODE = 1
+;;ENDIF
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                           文本宏实现开始                                     
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+SSS_TemporaryString TEXTEQU <>
+
+
+SSS_NumStringsInConstAnsi = 0
+SSS_NumStringsInDataAnsi = 0
+SSS_NumStringsInConstUnicode = 0
+SSS_NumStringsInDataUnicode = 0
+
+SSS_NumStringsInConstAnsi0 = 0
+SSS_NumStringsInDataAnsi0 = 0
+SSS_NumStringsInConstUnicode0 = 0
+SSS_NumStringsInDataUnicode0 = 0
+
+
+SSS_ConstAnsi0ZeroString TEXTEQU <>
+SSS_DataAnsi0ZeroString TEXTEQU <>
+SSS_ConstUnicode0ZeroString TEXTEQU <>
+SSS_DataUnicode0ZeroString TEXTEQU <>
+
+SSS_ConstAnsi0ZeroStringAlignment TEXTEQU <0>
+SSS_DataAnsi0ZeroStringAlignment TEXTEQU <0>
+SSS_ConstUnicode0ZeroStringAlignment TEXTEQU <0>
+SSS_DataUnicode0ZeroStringAlignment TEXTEQU <0>
+
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                        STRINGA                                             
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+IFDEF UNICODE
+	IF UNICODE NE 0
+		STRING equ STRINGW
+	ELSE
+		STRING equ STRINGA
+	ENDIF
+ELSE
+	STRING equ STRINGA
+ENDIF
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+STRINGA MACRO _s_
+local txt, str, c, bslash, lq, sc
+txt TEXTEQU <>
+bslash = 0						;; backslash reached
+
+lq = 0							;; leading quotation mark ( "...... )
+sc = 0							;; separating comma ( ...,... )
+
+	str SUBSTR <_s_>, 1
+
+	% FORC cha, <str>
+		IF bslash
+			bslash = 0
+			IF "&cha" EQ "\"
+				IF sc
+					txt CATSTR txt, <,>
+					sc = 0
+				ENDIF
+
+				IF lq
+					txt CATSTR txt, <&cha>
+				ELSE
+					txt CATSTR txt, <">, <&cha>			;; add ( " )
+					lq = 1								;; set flag
+				ENDIF
+			ELSE
+
+				IF lq
+					txt CATSTR txt, <">					;;"
+					lq = 0
+					sc = 1
+				ENDIF
+
+				IF sc
+					txt CATSTR txt, <,>
+				ENDIF
+
+				sc = 1
+
+				IF "&cha" EQ "n"			;;  \n   = CR, LF
+					txt CATSTR txt, <0Dh,0Ah>
+				ELSEIF "&cha" EQ "r"		;;  \r   = CR
+					txt CATSTR txt, <0Dh>
+				ELSEIF "&cha" EQ "l"		;;  \l   = LF
+					txt CATSTR txt, <0Ah>
+				ELSEIF "&cha" EQ ":"		;;  \:   = !
+					txt CATSTR txt, <21h>
+				ELSEIF "&cha" EQ "{"		;;  \{   = (
+					txt CATSTR txt, <28h>
+				ELSEIF "&cha" EQ "}"		;;  \}   = )
+					txt CATSTR txt, <29h>
+				ELSEIF "&cha" EQ "["		;;  \[   = <
+					txt CATSTR txt, <3Ch>
+				ELSEIF "&cha" EQ "]"		;;  \]   = >
+					txt CATSTR txt, <3Eh>
+				ELSEIF "&cha" EQ "="		;;  \=   = "
+					txt CATSTR txt, <22h>
+				ELSEIF "&cha" EQ "-"		;;  \-   = '
+					txt CATSTR txt, <27h>
+				ELSEIF "&cha" EQ "0"		;;  \0   = 0
+					txt CATSTR txt, <0h>
+				ELSEIF "&cha" EQ "a"		;;  \a   = BEL
+					txt CATSTR txt, <7h>
+				ELSEIF "&cha" EQ "b"		;;  \b   = BS
+					txt CATSTR txt, <8h>
+				ELSEIF "&cha" EQ "t"		;;  \t   = HT
+					txt CATSTR txt, <9h>
+				ELSEIF "&cha" EQ "v"		;;  \v   = VT
+					txt CATSTR txt, <0Bh>
+				ELSEIF "&cha" EQ "f"		;;  \f   = FF
+					txt CATSTR txt, <0Ch>
+				ELSEIF "&cha" EQ "*"		;;  \*   = *nothing*
+					;; Add nothing. Workaround against "CreateFile" -> "CreateFileA" problem.
+					;; See above KNOWN PROBLEMS for details.
+					sc = 0
+				ELSE
+					txt CATSTR txt, <"&cha">
+					echo WARNING!: '&cha' : unrecognized character escape sequence
+					;; This also can be used to workaround against "CreateFile" -> "CreateFileA" problem.
+					;; See above KNOWN PROBLEMS for details.
+				ENDIF
+			ENDIF
+		ELSE
+			IF "&cha" EQ "\"
+				bslash = 1
+			ELSE
+				IF sc
+					txt CATSTR txt, <,>
+					sc = 0
+				ENDIF
+				IF lq
+					txt CATSTR txt, <&cha>
+				ELSE
+					txt CATSTR txt, <">, <&cha>			;; add leading ( " )
+					lq = 1								;; set flag
+				ENDIF
+			ENDIF
+		ENDIF
+
+	ENDM
+
+	IF lq
+		txt CATSTR txt, <">					;;"
+	ENDIF
+
+	EXITM <txt>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                                               STRINGW                                             
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+STRINGW MACRO _s_
+local txt, str, bslash, lq, sc
+txt TEXTEQU <>
+bslash = 0						;; backslash reached
+
+lq = 0							;; leading quotation mark ( "...... )
+sc = 0							;; separating comma ( ...,... )
+
+	str SUBSTR <_s_>, 1
+
+	% FORC cha, <str>
+		IF bslash
+			bslash = 0
+			IF "&cha" EQ "\"
+
+				IF sc
+					txt CATSTR txt, <,>
+					sc = 0
+				ENDIF
+				txt CATSTR txt, <"&cha">
+				sc = 1
+			ELSE
+			
+				IF lq
+					txt CATSTR txt, <">					;;"
+					lq = 0
+					sc = 1
+				ENDIF
+	
+				IF sc
+					txt CATSTR txt, <,>
+				ENDIF
+
+				sc = 1
+
+				IF "&cha" EQ "n"			;;  \n   = CR, LF
+					txt CATSTR txt, <0Dh,0Ah>
+				ELSEIF "&cha" EQ "r"		;;  \r   = CR
+					txt CATSTR txt, <0Dh>
+				ELSEIF "&cha" EQ "l"		;;  \l   = LF
+					txt CATSTR txt, <0Ah>
+				ELSEIF "&cha" EQ ":"		;;  \:   = !
+					txt CATSTR txt, <21h>
+				ELSEIF "&cha" EQ "{"		;;  \{   = (
+					txt CATSTR txt, <28h>
+				ELSEIF "&cha" EQ "}"		;;  \}   = )
+					txt CATSTR txt, <29h>
+				ELSEIF "&cha" EQ "["		;;  \[   = <
+					txt CATSTR txt, <3Ch>
+				ELSEIF "&cha" EQ "]"		;;  \]   = >
+					txt CATSTR txt, <3Eh>
+				ELSEIF "&cha" EQ "="		;;  \=   = "
+					txt CATSTR txt, <22h>
+				ELSEIF "&cha" EQ "-"		;;  \-   = '
+					txt CATSTR txt, <27h>
+				ELSEIF "&cha" EQ "0"		;;  \0   = 0
+					txt CATSTR txt, <0h>
+				ELSEIF "&cha" EQ "a"		;;  \a   = BEL
+					txt CATSTR txt, <7h>
+				ELSEIF "&cha" EQ "b"		;;  \b   = BS
+					txt CATSTR txt, <8h>
+				ELSEIF "&cha" EQ "t"		;;  \t   = HT
+					txt CATSTR txt, <9h>
+				ELSEIF "&cha" EQ "v"		;;  \v   = VT
+					txt CATSTR txt, <0Bh>
+				ELSEIF "&cha" EQ "f"		;;  \f   = FF
+					txt CATSTR txt, <0Ch>
+				ELSEIF "&cha" EQ "*"		;;  \*   = *nothing*
+					;; Add nothing. Workaround against "CreateFile" -> "CreateFileA" problem.
+					;; See above LIMITATIONS for details.
+					sc = 0
+				ELSE
+					txt CATSTR txt, <"&cha">
+					echo WARNING!: '&cha' : unrecognized character escape sequence
+					;; This also can be used to workaround against "CreateFile" -> "CreateFileA" problem.
+					;; See above LIMITATIONS for details.
+				ENDIF
+			ENDIF
+		ELSE
+			IF "&cha" EQ "\"
+				bslash = 1
+			ELSE
+				IF sc
+					txt CATSTR txt, <,>
+					sc = 0
+				ENDIF
+				txt CATSTR txt, <"&cha">
+				sc = 1
+			ENDIF
+		ENDIF
+	ENDM
+
+	EXITM <txt>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                              MACROS NOT TERMINATING STRING WITH ZERO                              
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                                       TA /CTA / TW / CTW                                          
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TA MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.data
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString)
+	ELSE
+		;;ALIGN aln
+		;;d db 0
+		;; Do not let define empty string with TA macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : TA macro ERROR! To define empty string use TA0
+		.ERR
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CTA MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.const
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString)
+	ELSE
+		;;ALIGN aln
+		;;d db 0
+		;; Do not let define empty string with CTA macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CTA macro ERROR! To define empty string use CTA0
+		.ERR
+	ENDIF
+
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TW MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : TW macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.data
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString)
+	ELSE
+		;;ALIGN aln
+		;;d dw 0
+		;; Do not let define empty string with TW macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : TW macro ERROR! To define empty string use TW0
+		.ERR		
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CTW MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CTW macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.const
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString)
+	ELSE
+		;;ALIGN aln
+		;;d dw 0
+		;; Do not let define empty string with CTW macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CTW macro ERROR! To define empty string use CTW0
+		.ERR	
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+T MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		TW txt, lora, aorl
+	ELSE
+		TA txt, lora, aorl
+	ENDIF
+ELSE
+	TA txt, lora, aorl
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CT MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		CTW txt, lora, aorl
+	ELSE
+		CTA txt, lora, aorl
+	ENDIF
+ELSE
+	CTA txt, lora, aorl
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                                      $TA / $CTA / $TW / $CTW                                      
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CTA MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+	
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	IF len EQ 0
+		;; Do not let define empty string with $TA macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CTA macro ERROR! To define empty string use $CTA0
+		.ERR
+	ENDIF
+			
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		count = 1
+		WHILE count LE SSS_NumStringsInConstAnsi
+
+			IF len EQ @SizeStr(%@CatStr(<SSS_ConstAnsiStringNo>, %(count)))
+				;; Lenght the same. Let's compare.
+				IF @InStr(1, %@CatStr(<SSS_ConstAnsiStringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+					;; This string was found in base
+					defineit = 0		;; Don't add it in base
+					d TEXTEQU @CatStr(<SSS_ConstAnsiOffsetNo>, %(count))
+
+					IF aln GT @CatStr(<SSS_ConstAnsiAlignmentNo>, %(count))
+						line TEXTEQU %@Line
+						% ECHO @FileCur(line) : $CTA macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+					ENDIF
+
+					;; Break the loop
+					count = SSS_NumStringsInConstAnsi
+				ENDIF
+			ENDIF
+			count = count + 1
+		ENDM
+
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.const
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString)
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInConstAnsi = SSS_NumStringsInConstAnsi + 1
+
+		@CatStr(<SSS_ConstAnsiStringNo>, %(SSS_NumStringsInConstAnsi)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_ConstAnsiOffsetNo>, %(SSS_NumStringsInConstAnsi)) TEXTEQU <d>
+		@CatStr(<SSS_ConstAnsiAlignmentNo>, %(SSS_NumStringsInConstAnsi)) TEXTEQU <aln>
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CTW MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+	
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	IF len EQ 0
+		;; Do not let define empty string with $TA macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CTW macro ERROR! To define empty string use $CTW0
+		.ERR
+	ENDIF
+			
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CTW macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		count = 1
+		WHILE count LE SSS_NumStringsInConstUnicode
+
+			IF len EQ @SizeStr(%@CatStr(<SSS_ConstUnicodeStringNo>, %(count)))
+				;; Lenght the same. Let's compare.
+				IF @InStr(1, %@CatStr(<SSS_ConstUnicodeStringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+					;; This string was found in base
+					defineit = 0		;; Don't add it in base
+					d TEXTEQU @CatStr(<SSS_ConstUnicodeOffsetNo>, %(count))
+
+					IF aln GT @CatStr(<SSS_ConstUnicodeAlignmentNo>, %(count))
+						line TEXTEQU %@Line
+						% ECHO @FileCur(line) : $CTW macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+					ENDIF
+
+					;; Break the loop
+					count = SSS_NumStringsInConstUnicode
+				ENDIF
+			ENDIF
+			count = count + 1
+		ENDM
+
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.const
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString)
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInConstUnicode = SSS_NumStringsInConstUnicode + 1
+
+		@CatStr(<SSS_ConstUnicodeStringNo>, %(SSS_NumStringsInConstUnicode)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_ConstUnicodeOffsetNo>, %(SSS_NumStringsInConstUnicode)) TEXTEQU <d>
+		@CatStr(<SSS_ConstUnicodeAlignmentNo>, %(SSS_NumStringsInConstUnicode)) TEXTEQU <aln>
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CT MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		EXITM $CTW(txt, lora, aorl)
+	ELSE
+		EXITM $CTA(txt, lora, aorl)
+	ENDIF
+ELSE
+	EXITM $CTA(txt, lora, aorl)
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$TA MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+	
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	IF len EQ 0
+		;; Do not let define empty string with $TA macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $TA macro ERROR! To define empty string use $TA0
+		.ERR
+	ENDIF
+			
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		count = 1
+		WHILE count LE SSS_NumStringsInDataAnsi
+
+			IF len EQ @SizeStr(%@CatStr(<SSS_DataAnsiStringNo>, %(count)))
+				;; Lenght the same. Let's compare.
+				IF @InStr(1, %@CatStr(<SSS_DataAnsiStringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+					;; This string was found in base
+					defineit = 0		;; Don't add it in base
+					d TEXTEQU @CatStr(<SSS_DataAnsiOffsetNo>, %(count))
+
+					IF aln GT @CatStr(<SSS_DataAnsiAlignmentNo>, %(count))
+						line TEXTEQU %@Line
+						% ECHO @FileCur(line) : $TA macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+					ENDIF
+
+					;; Break the loop
+					count = SSS_NumStringsInDataAnsi
+				ENDIF
+			ENDIF
+			count = count + 1
+		ENDM
+
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.data
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString)
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInDataAnsi = SSS_NumStringsInDataAnsi + 1
+
+		@CatStr(<SSS_DataAnsiStringNo>, %(SSS_NumStringsInDataAnsi)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_DataAnsiOffsetNo>, %(SSS_NumStringsInDataAnsi)) TEXTEQU <d>
+		@CatStr(<SSS_DataAnsiAlignmentNo>, %(SSS_NumStringsInDataAnsi)) TEXTEQU <aln>
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$TW MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+	
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	IF len EQ 0
+		;; Do not let define empty string with $TW macro
+		;; because it defines non-zero terminating strings.
+		;; So, empty non-zero terminating string... What's this for?
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $TW macro ERROR! To define empty string use $TW0
+		.ERR
+	ENDIF
+			
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $TW macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+	
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		count = 1
+		WHILE count LE SSS_NumStringsInDataUnicode
+
+			IF len EQ @SizeStr(%@CatStr(<SSS_DataUnicodeStringNo>, %(count)))
+				;; Lenght the same. Let's compare.
+				IF @InStr(1, %@CatStr(<SSS_DataUnicodeStringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+					;; This string was found in base
+					defineit = 0		;; Don't add it in base
+					d TEXTEQU @CatStr(<SSS_DataUnicodeOffsetNo>, %(count))
+
+					IF aln GT @CatStr(<SSS_DataUnicodeAlignmentNo>, %(count))
+						line TEXTEQU %@Line
+						% ECHO @FileCur(line) : $TW macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+					ENDIF
+
+					;; Break the loop
+					count = SSS_NumStringsInDataUnicode
+				ENDIF
+			ENDIF
+			count = count + 1
+		ENDM
+
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.data
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString)
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInDataUnicode = SSS_NumStringsInDataUnicode + 1
+
+		@CatStr(<SSS_DataUnicodeStringNo>, %(SSS_NumStringsInDataUnicode)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_DataUnicodeOffsetNo>, %(SSS_NumStringsInDataUnicode)) TEXTEQU <d>
+		@CatStr(<SSS_DataUnicodeAlignmentNo>, %(SSS_NumStringsInDataUnicode)) TEXTEQU <aln>
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$T MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		EXITM $TW(txt, lora, aorl)
+	ELSE
+		EXITM $TA(txt, lora, aorl)
+	ENDIF
+ELSE
+	EXITM $TA(txt, lora, aorl)
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                               MACROS TERMINATING STRING WITH ZERO                                 
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                                     TA0 / CTA0 / TW0 / CTW0                                       
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TA0 MACRO txt, lora, aorl
+	local d, aln, sn
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.data
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		d db 0		
+	ENDIF
+
+	@CurSeg ENDS
+	sn SEGMENT
+	
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TW0 MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : TW0 macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.data
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		d dw 0		
+	ENDIF
+
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+T0 MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		TW0 txt, lora, aorl
+	ELSE
+		TA0 txt, lora, aorl
+	ENDIF
+ELSE
+	TA0 txt, lora, aorl
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CTA0 MACRO txt, lora, aorl
+	local d, aln, sn
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.const
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		d db 0		
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+;===========================================================================
+;字符串常量定义.const 
+;===========================================================================
+String MACRO txt, lora, aorl
+	local d, aln, sn
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.const
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d db STRINGA(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		d db 0		
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CTW0 MACRO txt, lora, aorl
+	local d, aln, sn, line
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CTW0 macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	sn TEXTEQU @CurSeg
+
+	.const
+	IF @SizeStr(%SSS_TemporaryString)
+		ALIGN aln
+		d dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		d dw 0		
+	ENDIF
+	
+	@CurSeg ENDS
+	sn SEGMENT
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CT0 MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		CTW0 txt, lora, aorl
+	ELSE
+		CTA0 txt, lora, aorl
+	ENDIF
+ELSE
+	CTA0 txt, lora, aorl
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                                     $TA0 / $CTA0 / $TW0 / $CTW0                                   
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$TA0 MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len
+
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		IF len NE 0
+			count = 1
+			WHILE count LE SSS_NumStringsInDataAnsi0
+
+				IF len EQ @SizeStr(%@CatStr(<SSS_DataAnsi0StringNo>, %(count)))
+					;; Lenght the same. Let's compare.
+					IF @InStr(1, %@CatStr(<SSS_DataAnsi0StringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+						;; This string was found in base
+						defineit = 0		;; Don't add it in base
+						d TEXTEQU @CatStr(<SSS_DataAnsi0OffsetNo>, %(count))
+
+						IF aln GT @CatStr(<SSS_DataAnsi0AlignmentNo>, %(count))
+							line TEXTEQU %@Line
+							% ECHO @FileCur(line) : $TA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+						ENDIF
+
+						;; Break the loop
+						count = SSS_NumStringsInDataAnsi0
+					ENDIF
+				ENDIF
+				count = count + 1
+			ENDM
+		ELSE
+			;; Empty string
+			IF @SizeStr(%SSS_DataAnsi0ZeroString)
+				d TEXTEQU SSS_DataAnsi0ZeroString
+				defineit = 0		;; Don't add it in base
+			
+				IF aln GT SSS_DataAnsi0ZeroStringAlignment
+					line TEXTEQU %@Line
+					% ECHO @FileCur(line) : $TA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+				ENDIF
+
+			ENDIF
+		ENDIF
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.data
+		IF len NE 0
+			ALIGN aln
+			d db STRINGA(%SSS_TemporaryString), 0
+		ELSE
+			ALIGN aln
+			d db 0							;; empty str
+		ENDIF
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInDataAnsi0 = SSS_NumStringsInDataAnsi0 + 1
+
+		@CatStr(<SSS_DataAnsi0StringNo>, %(SSS_NumStringsInDataAnsi0)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_DataAnsi0OffsetNo>, %(SSS_NumStringsInDataAnsi0)) TEXTEQU <d>
+		@CatStr(<SSS_DataAnsi0AlignmentNo>, %(SSS_NumStringsInDataAnsi0)) TEXTEQU <aln>
+
+		IFE @SizeStr(%SSS_TemporaryString)
+			SSS_DataAnsi0ZeroString TEXTEQU <d>
+			SSS_DataAnsi0ZeroStringAlignment TEXTEQU <aln>
+		ENDIF
+
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$TW0 MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $TW0 macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		IF len NE 0
+			count = 1
+			WHILE count LE SSS_NumStringsInDataUnicode0
+
+				IF len EQ @SizeStr(%@CatStr(<SSS_DataUnicode0StringNo>, %(count)))
+					;; Lenght the same. Let's compare.
+					IF @InStr(1, %@CatStr(<SSS_DataUnicode0StringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+						;; This string was found in base
+						defineit = 0		;; Don't add it in base
+						d TEXTEQU @CatStr(<SSS_DataUnicode0OffsetNo>, %(count))
+
+						IF aln GT @CatStr(<SSS_DataUnicode0AlignmentNo>, %(count))
+							line TEXTEQU %@Line
+							% ECHO @FileCur(line) : $TW0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+						ENDIF
+
+						;; Break the loop
+						count = SSS_NumStringsInDataUnicode0
+					ENDIF
+				ENDIF
+				count = count + 1
+			ENDM
+		ELSE
+			;; Empty string
+			IF @SizeStr(%SSS_DataUnicode0ZeroString)
+				d TEXTEQU SSS_DataUnicode0ZeroString
+				defineit = 0		;; Don't add it in base
+			
+				IF aln GT SSS_DataUnicode0ZeroStringAlignment
+					line TEXTEQU %@Line
+					% ECHO @FileCur(line) : $TW0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+				ENDIF
+
+			ENDIF
+		ENDIF
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.data
+		IF len NE 0
+			ALIGN aln
+			d dw STRINGW(%SSS_TemporaryString), 0
+		ELSE
+			ALIGN aln
+			d dw 0							;; empty str
+		ENDIF
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInDataUnicode0 = SSS_NumStringsInDataUnicode0 + 1
+
+		@CatStr(<SSS_DataUnicode0StringNo>, %(SSS_NumStringsInDataUnicode0)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_DataUnicode0OffsetNo>, %(SSS_NumStringsInDataUnicode0)) TEXTEQU <d>
+		@CatStr(<SSS_DataUnicode0AlignmentNo>, %(SSS_NumStringsInDataUnicode0)) TEXTEQU <aln>
+
+		IFE @SizeStr(%SSS_TemporaryString)
+			SSS_DataUnicode0ZeroString TEXTEQU <d>
+			SSS_DataUnicode0ZeroStringAlignment TEXTEQU <aln>
+		ENDIF
+
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$T0 MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		EXITM $TW0(txt, lora, aorl)
+	ELSE
+		EXITM $TA0(txt, lora, aorl)
+	ENDIF
+ELSE
+	EXITM $TA0(txt, lora, aorl)
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CTA0 MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len
+
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		IF len NE 0
+			count = 1
+			WHILE count LE SSS_NumStringsInConstAnsi0
+
+				IF len EQ @SizeStr(%@CatStr(<SSS_ConstAnsi0StringNo>, %(count)))
+					;; Lenght the same. Let's compare.
+					IF @InStr(1, %@CatStr(<SSS_ConstAnsi0StringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+						;; This string was found in base
+						defineit = 0		;; Don't add it in base
+						d TEXTEQU @CatStr(<SSS_ConstAnsi0OffsetNo>, %(count))
+
+						IF aln GT @CatStr(<SSS_ConstAnsi0AlignmentNo>, %(count))
+							line TEXTEQU %@Line
+							% ECHO @FileCur(line) : $CTA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+						ENDIF
+
+						;; Break the loop
+						count = SSS_NumStringsInConstAnsi0
+					ENDIF
+				ENDIF
+				count = count + 1
+			ENDM
+		ELSE
+			;; Empty string
+			IF @SizeStr(%SSS_ConstAnsi0ZeroString)
+				d TEXTEQU SSS_ConstAnsi0ZeroString
+				defineit = 0		;; Don't add it in base
+			
+				IF aln GT SSS_ConstAnsi0ZeroStringAlignment
+					line TEXTEQU %@Line
+					% ECHO @FileCur(line) : $CTA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+				ENDIF
+
+			ENDIF
+		ENDIF
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.const
+		IF len NE 0
+			ALIGN aln
+			d db STRINGA(%SSS_TemporaryString), 0
+		ELSE
+			ALIGN aln
+			d db 0							;; empty str
+		ENDIF
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInConstAnsi0 = SSS_NumStringsInConstAnsi0 + 1
+
+		@CatStr(<SSS_ConstAnsi0StringNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_ConstAnsi0OffsetNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU <d>
+		@CatStr(<SSS_ConstAnsi0AlignmentNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU <aln>
+
+		IFE @SizeStr(%SSS_TemporaryString)
+			SSS_ConstAnsi0ZeroString TEXTEQU <d>
+			SSS_ConstAnsi0ZeroStringAlignment TEXTEQU <aln>
+		ENDIF
+
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+;===========================================================================
+	;定义字符串宏函数, 应该是会经常使用
+;===========================================================================
+
+String$ MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len
+
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <1>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		IF len NE 0
+			count = 1
+			WHILE count LE SSS_NumStringsInConstAnsi0
+
+				IF len EQ @SizeStr(%@CatStr(<SSS_ConstAnsi0StringNo>, %(count)))
+					;; Lenght the same. Let's compare.
+					IF @InStr(1, %@CatStr(<SSS_ConstAnsi0StringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+						;; This string was found in base
+						defineit = 0		;; Don't add it in base
+						d TEXTEQU @CatStr(<SSS_ConstAnsi0OffsetNo>, %(count))
+
+						IF aln GT @CatStr(<SSS_ConstAnsi0AlignmentNo>, %(count))
+							line TEXTEQU %@Line
+							% ECHO @FileCur(line) : $CTA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+						ENDIF
+
+						;; Break the loop
+						count = SSS_NumStringsInConstAnsi0
+					ENDIF
+				ENDIF
+				count = count + 1
+			ENDM
+		ELSE
+			;; Empty string
+			IF @SizeStr(%SSS_ConstAnsi0ZeroString)
+				d TEXTEQU SSS_ConstAnsi0ZeroString
+				defineit = 0		;; Don't add it in base
+			
+				IF aln GT SSS_ConstAnsi0ZeroStringAlignment
+					line TEXTEQU %@Line
+					% ECHO @FileCur(line) : $CTA0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+				ENDIF
+
+			ENDIF
+		ENDIF
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.const
+		IF len NE 0
+			ALIGN aln
+			d db STRINGA(%SSS_TemporaryString), 0
+		ELSE
+			ALIGN aln
+			d db 0							;; empty str
+		ENDIF
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInConstAnsi0 = SSS_NumStringsInConstAnsi0 + 1
+
+		@CatStr(<SSS_ConstAnsi0StringNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_ConstAnsi0OffsetNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU <d>
+		@CatStr(<SSS_ConstAnsi0AlignmentNo>, %(SSS_NumStringsInConstAnsi0)) TEXTEQU <aln>
+
+		IFE @SizeStr(%SSS_TemporaryString)
+			SSS_ConstAnsi0ZeroString TEXTEQU <d>
+			SSS_ConstAnsi0ZeroStringAlignment TEXTEQU <aln>
+		ENDIF
+
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CTW0 MACRO txt, lora, aorl
+	local d, aln, sn, count, defineit, len, line
+
+	;; defineit - flag: 1 - define this string
+	;;                  0 - do not define
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+
+	IFDEF DISABLE_STRING_POOLING
+		defineit = 1
+	ELSE
+		defineit = 0
+	ENDIF
+
+	;;
+	;; What about label and alignment
+	;;
+	
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			d TEXTEQU <lora>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			d TEXTEQU <aorl>
+			defineit = 1
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CTW0 macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	;;
+	;; Search in base for this string
+	;;
+
+	IF defineit EQ 0
+	
+		defineit = 1
+
+		IF len NE 0
+			count = 1
+			WHILE count LE SSS_NumStringsInConstUnicode0
+
+				IF len EQ @SizeStr(%@CatStr(<SSS_ConstUnicode0StringNo>, %(count)))
+					;; Lenght the same. Let's compare.
+					IF @InStr(1, %@CatStr(<SSS_ConstUnicode0StringNo>, %(count)), %SSS_TemporaryString) EQ 1 
+						;; This string was found in base
+						defineit = 0		;; Don't add it in base
+						d TEXTEQU @CatStr(<SSS_ConstUnicode0OffsetNo>, %(count))
+
+						IF aln GT @CatStr(<SSS_ConstUnicode0AlignmentNo>, %(count))
+							line TEXTEQU %@Line
+							% ECHO @FileCur(line) : $CTW0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+						ENDIF
+
+						;; Break the loop
+						count = SSS_NumStringsInConstUnicode0
+					ENDIF
+				ENDIF
+				count = count + 1
+			ENDM
+		ELSE
+			;; Empty string
+			IF @SizeStr(%SSS_ConstUnicode0ZeroString)
+				d TEXTEQU SSS_ConstUnicode0ZeroString
+				defineit = 0		;; Don't add it in base
+			
+				IF aln GT SSS_ConstUnicode0ZeroStringAlignment
+					line TEXTEQU %@Line
+					% ECHO @FileCur(line) : $CTW0 macro WARNING! Alignment is greater then previous instance of "&SSS_TemporaryString&".
+				ENDIF
+
+			ENDIF
+		ENDIF
+	ENDIF	;; IF defineit EQ 0
+
+	;;
+	;; To be or not to be?
+	;;
+
+	IF defineit EQ 1
+
+		;; If string previously defined but label for this text passed to macro define it anyway
+
+		sn TEXTEQU @CurSeg
+
+		.const
+		IF len NE 0
+			ALIGN aln
+			d dw STRINGW(%SSS_TemporaryString), 0
+		ELSE
+			ALIGN aln
+			d dw 0							;; empty str
+		ENDIF
+
+		@CurSeg ENDS
+		sn SEGMENT
+
+		IFNDEF DISABLE_STRING_POOLING		;; If DISABLE_STRING_POOLING defined, disable double-definition tracking
+		;;
+		;; Add string and its offset to database
+		;;
+
+		SSS_NumStringsInConstUnicode0 = SSS_NumStringsInConstUnicode0 + 1
+
+		@CatStr(<SSS_ConstUnicode0StringNo>, %(SSS_NumStringsInConstUnicode0)) TEXTEQU SSS_TemporaryString
+		@CatStr(<SSS_ConstUnicode0OffsetNo>, %(SSS_NumStringsInConstUnicode0)) TEXTEQU <d>
+		@CatStr(<SSS_ConstUnicode0AlignmentNo>, %(SSS_NumStringsInConstUnicode0)) TEXTEQU <aln>
+
+		IFE @SizeStr(%SSS_TemporaryString)
+			SSS_ConstUnicode0ZeroString TEXTEQU <d>
+			SSS_ConstUnicode0ZeroStringAlignment TEXTEQU <aln>
+		ENDIF
+
+		ENDIF
+
+	ENDIF
+
+	EXITM <offset d>
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CT0 MACRO txt, lora, aorl
+IFDEF UNICODE
+	IF UNICODE NE 0
+		EXITM $CTW0(txt, lora, aorl)
+	ELSE
+		EXITM $CTA0(txt, lora, aorl)
+	ENDIF
+ELSE
+	EXITM $CTA0(txt, lora, aorl)
+ENDIF
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                     COUNTED_UNICODE_STRING / $COUNTED_UNICODE_STRING                              
+;                    CCOUNTED_UNICODE_STRING / $CCOUNTED_UNICODE_STRING                             
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+IFNDEF UNICODE_STRING
+	UNICODE_STRING STRUCT
+		woLength		WORD	?		; len of string in bytes (not chars)
+		MaximumLength	WORD	?		; len of Buffer in bytes (not chars)
+		Buffer			DWORD	?		; pointer to string
+	UNICODE_STRING ENDS
+	PUNICODE_STRING	typedef	PTR UNICODE_STRING
+ENDIF
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+COUNTED_UNICODE_STRING MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : COUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.data
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+
+	@CurSeg ENDS
+	segn SEGMENT
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+CCOUNTED_UNICODE_STRING MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+	
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CCOUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.const
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+
+	@CurSeg ENDS
+	segn SEGMENT
+ENDM
+;===========================================================================
+	;内核结构Unicode定义
+;===========================================================================
+StUString MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+	
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : CCOUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.const
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+
+	@CurSeg ENDS
+	segn SEGMENT
+ENDM
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$COUNTED_UNICODE_STRING MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $COUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.data
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+	@CurSeg ENDS
+	segn SEGMENT
+	EXITM <offset us>
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+$CCOUNTED_UNICODE_STRING MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CCOUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.const
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+	@CurSeg ENDS
+	segn SEGMENT
+	EXITM <offset us>
+
+ENDM
+
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;                              T E X T   M A C R O S   E N D                                        
+;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+;===========================================================================
+	;内核Unicode结构定义
+;===========================================================================
+StUString$ MACRO txt, lora, aorl
+
+	local dum, segn, us, line, len
+
+	;; remove quotation marks if not empty string
+
+	IFNB <txt>
+		SSS_TemporaryString SUBSTR <txt>, 2, @SizeStr(<txt>) - 2
+	ELSE
+		SSS_TemporaryString TEXTEQU <>
+	ENDIF
+
+	len TEXTEQU @SizeStr(%SSS_TemporaryString)
+
+	aln TEXTEQU <2>
+
+	IFNB <lora>
+		IF (OPATTR (lora)) AND 00000100y	;; immediate value ?
+			;; yes -> lora is alignment
+			aln TEXTEQU %lora
+		ELSE
+			;; no -> lora is label
+			us TEXTEQU <lora>
+		ENDIF
+	ENDIF
+
+	IFNB <aorl>
+		IF (OPATTR (aorl)) AND 00000100y	;; immediate value ?
+			;; yes -> aorl is alignment
+			aln TEXTEQU %aorl
+		ELSE
+			;; no -> aorl is label
+			us TEXTEQU <aorl>
+		ENDIF
+	ENDIF
+
+	IF aln LT 2
+		line TEXTEQU %@Line
+		% ECHO @FileCur(line) : $CCOUNTED_UNICODE_STRING macro WARNING! Alignment for Unicode string must be at least 2 bytes.
+	ENDIF
+
+	segn TEXTEQU @CurSeg
+
+	.const
+	IF len NE 0
+		ALIGN aln
+		dum dw STRINGW(%SSS_TemporaryString), 0
+	ELSE
+		ALIGN aln
+		dum dw 0		
+	ENDIF
+
+	ALIGN 4
+
+	us UNICODE_STRING {(sizeof dum)-2, sizeof dum, offset dum}
+	@CurSeg ENDS
+	segn SEGMENT
+	EXITM <offset us>
+
+ENDM
+
+
+
+
+
+
+
+
+
+
+

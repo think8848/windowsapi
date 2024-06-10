@@ -1,0 +1,10 @@
+﻿  FloatingWaterMark.cpp
+F:\Source\Windows\Chapter16\FloatingWaterMark\FloatingWaterMark\FloatingWaterMark.cpp(39,77): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter16\FloatingWaterMark\FloatingWaterMark\FloatingWaterMark.cpp(40,74): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter16\FloatingWaterMark\FloatingWaterMark\FloatingWaterMark.cpp(70,81): warning C4267: “参数”: 从“size_t”转换到“UINT”，可能丢失数据
+F:\Source\Windows\Chapter16\FloatingWaterMark\FloatingWaterMark\FloatingWaterMark.cpp(81,84): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 3 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  FloatingWaterMark.vcxproj -> F:\Source\Windows\Chapter16\FloatingWaterMark\x64\Release\FloatingWaterMark.exe

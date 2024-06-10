@@ -1,0 +1,2 @@
+F:\Source\Windows\Chapter16\StaticLinkLibrary\Debug\StaticLinkLibrary.pdb
+F:\Source\Windows\Chapter16\StaticLinkLibrary\StaticLinkLibrary\Debug\StaticLinkLibrary.pdb

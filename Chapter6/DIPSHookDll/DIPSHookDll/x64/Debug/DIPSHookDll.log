@@ -1,0 +1,5 @@
+﻿  DIPSHookDll.cpp
+F:\Source\Windows\Chapter16\DIPSHookDll\DIPSHookDll\DIPSHookDll.cpp(120,25): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter16\DIPSHookDll\DIPSHookDll\DIPSHookDll.cpp(175,32): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+    正在创建库 F:\Source\Windows\Chapter16\DIPSHookDll\x64\Debug\DIPSHookDll.lib 和对象 F:\Source\Windows\Chapter16\DIPSHookDll\x64\Debug\DIPSHookDll.exp
+  DIPSHookDll.vcxproj -> F:\Source\Windows\Chapter16\DIPSHookDll\x64\Debug\DIPSHookDll.dll

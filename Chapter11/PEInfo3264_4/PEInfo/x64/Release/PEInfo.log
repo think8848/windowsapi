@@ -1,0 +1,8 @@
+﻿  PEInfo.cpp
+F:\Source\Windows\Chapter21\PEInfo3264_4\PEInfo\PEInfo.cpp(382,134): warning C4244: “参数”: 从“ULONGLONG”转换到“DWORD”，可能丢失数据
+  正在生成代码
+  5 of 9 functions (55.6%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  PEInfo.vcxproj -> F:\Source\Windows\Chapter21\PEInfo3264_4\x64\Release\PEInfo.exe

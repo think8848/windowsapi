@@ -1,0 +1,6 @@
+﻿  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+F:\Source\Windows\Chapter16\FWMDll\FWMDll\FWMDll.cpp(62): warning C4731: “InterceptExtTextOutW”: 框架指针寄存器“ebp”被内联程序集代码修改
+  All 3 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  FWMDll.vcxproj -> F:\Source\Windows\Chapter16\FWMDll\Release\FWMDll.dll

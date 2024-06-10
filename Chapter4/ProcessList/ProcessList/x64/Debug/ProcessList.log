@@ -1,0 +1,8 @@
+﻿  ProcessList.cpp
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(89,36): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(129,36): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(143,36): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(154,36): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(177,36): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+F:\Source\Windows\Chapter14\ProcessList\ProcessList\ProcessList.cpp(247,32): warning C4244: “=”: 从“LRESULT”转换到“int”，可能丢失数据
+  ProcessList.vcxproj -> F:\Source\Windows\Chapter14\ProcessList\x64\Debug\ProcessList.exe

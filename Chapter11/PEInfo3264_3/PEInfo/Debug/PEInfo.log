@@ -1,0 +1,4 @@
+﻿  PEInfo.cpp
+F:\Source\Windows\Chapter21\PEInfo3264_3\PEInfo\PEInfo.cpp(376,134): warning C4244: “参数”: 从“ULONGLONG”转换到“DWORD”，可能丢失数据
+  LINK : 缺少程序数据库 F:\Source\Windows\Chapter21\PEInfo3264_3\Debug\PEInfo.pdb；正在执行完全链接
+  PEInfo.vcxproj -> F:\Source\Windows\Chapter21\PEInfo3264_3\Debug\PEInfo.exe

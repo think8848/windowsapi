@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31402.337
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AsyncCallFunction", "AsyncCallFunction\AsyncCallFunction.vcxproj", "{F388A7A7-B056-4E5D-B355-A8EEA29F4729}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Debug|x64.ActiveCfg = Debug|x64
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Debug|x64.Build.0 = Debug|x64
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Debug|x86.ActiveCfg = Debug|Win32
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Debug|x86.Build.0 = Debug|Win32
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Release|x64.ActiveCfg = Release|x64
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Release|x64.Build.0 = Release|x64
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Release|x86.ActiveCfg = Release|Win32
+		{F388A7A7-B056-4E5D-B355-A8EEA29F4729}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {22CE1E69-9B3F-499B-9C45-1187E57E4314}
+	EndGlobalSection
+EndGlobal

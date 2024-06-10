@@ -1,0 +1,7 @@
+﻿  InjectDll.cpp
+    正在创建库 F:\Source\Windows\Detours\InjectDll\Release\InjectDll.lib 和对象 F:\Source\Windows\Detours\InjectDll\Release\InjectDll.exp
+  正在生成代码
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+  All 3 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  InjectDll.vcxproj -> F:\Source\Windows\Detours\InjectDll\Release\InjectDll.dll

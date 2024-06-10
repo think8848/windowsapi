@@ -1,0 +1,3 @@
+﻿  RunExecutableInMemory.cpp
+F:\Source\Windows\Chapter21\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(401,47): warning C4244: “=”: 从“ULONGLONG”转换到“DWORD”，可能丢失数据
+  RunExecutableInMemory.vcxproj -> F:\Source\Windows\Chapter21\RunExecutableInMemory\Debug\RunExecutableInMemory.exe

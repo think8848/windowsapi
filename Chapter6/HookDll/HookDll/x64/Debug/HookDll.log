@@ -1,0 +1,5 @@
+﻿  HookDll.cpp
+F:\Source\Windows\Chapter16\HookDll\HookDll\HookDll.cpp(78,34): warning C4244: “参数”: 从“LPARAM”转换到“UINT”，可能丢失数据
+F:\Source\Windows\Chapter16\HookDll\HookDll\HookDll.cpp(78,19): warning C4244: “参数”: 从“WPARAM”转换到“UINT”，可能丢失数据
+    正在创建库 F:\Source\Windows\Chapter16\HookDll\x64\Debug\HookDll.lib 和对象 F:\Source\Windows\Chapter16\HookDll\x64\Debug\HookDll.exp
+  HookDll.vcxproj -> F:\Source\Windows\Chapter16\HookDll\x64\Debug\HookDll.dll

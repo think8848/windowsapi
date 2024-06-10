@@ -1,0 +1,5 @@
+﻿  HookZwQuerySystemInformationApp.cpp
+HookZwQuerySystemInformationApp.obj : error LNK2019: 无法解析的外部符号 __imp__InstallHook，函数 "int __stdcall DialogProc(struct HWND__ *,unsigned int,unsigned int,long)" (?DialogProc@@YGHPAUHWND__@@IIJ@Z) 中引用了该符号
+HookZwQuerySystemInformationApp.obj : error LNK2019: 无法解析的外部符号 __imp__UninstallHook，函数 "int __stdcall DialogProc(struct HWND__ *,unsigned int,unsigned int,long)" (?DialogProc@@YGHPAUHWND__@@IIJ@Z) 中引用了该符号
+HookZwQuerySystemInformation.lib : warning LNK4272: 库计算机类型“x64”与目标计算机类型“x86”冲突
+F:\Source\Windows\Chapter16\HookZwQuerySystemInformation\Debug\HookZwQuerySystemInformationApp.exe : fatal error LNK1120: 2 个无法解析的外部命令

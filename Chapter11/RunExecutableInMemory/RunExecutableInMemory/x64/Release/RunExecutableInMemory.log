@@ -1,0 +1,15 @@
+﻿  RunExecutableInMemory.cpp
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(310,63): warning C4311: “类型强制转换”: 从“PIMAGE_DOS_HEADER”到“DWORD”的指针截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(310,63): warning C4302: “类型强制转换”: 从“PIMAGE_DOS_HEADER”到“DWORD”截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(374,81): warning C4311: “类型强制转换”: 从“FARPROC”到“DWORD”的指针截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(374,81): warning C4302: “类型强制转换”: 从“FARPROC”到“DWORD”截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(386,61): warning C4311: “类型强制转换”: 从“FARPROC”到“DWORD”的指针截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(386,61): warning C4302: “类型强制转换”: 从“FARPROC”到“DWORD”截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(468,98): warning C4311: “类型强制转换”: 从“LPVOID”到“DWORD”的指针截断
+C:\Users\SuperWang\Desktop\RunExecutableInMemory\RunExecutableInMemory\RunExecutableInMemory.cpp(468,98): warning C4302: “类型强制转换”: 从“LPVOID”到“DWORD”截断
+  正在生成代码
+  5 of 5 functions (100.0%) were compiled.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  RunExecutableInMemory.vcxproj -> C:\Users\SuperWang\Desktop\RunExecutableInMemory\x64\Release\RunExecutableInMemory.exe

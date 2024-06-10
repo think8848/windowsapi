@@ -1,0 +1,499 @@
+HJWasm v2.30, May  3 2017
+WinGUI1.ASM
+                            *   .model FLAT
+00000000                    *   _TEXT segment PARA FLAT PUBLIC 'CODE'
+                            *   _TEXT ends
+00000000                    *   _DATA segment PARA FLAT PUBLIC 'DATA'
+                            *   _DATA ends
+                            *   assume cs:flat,ds:flat,ss:flat,es:flat,fs:ERROR,gs:NOTHING
+
+                                ;*** a simple Win64 GUI app using WinInc include files
+                                ;*** this sample creates a window and a message loop
+                                ;*** requires JWasm v2.0+
+
+                                	option casemap:none
+
+ = 500                          WINVER				equ 500h
+ = 1                            WIN32_LEAN_AND_MEAN equ 1
+
+                                	.list
+                                	.cref
+
+                                	option frame:auto	; generate prologues for SEH
+                                	option win64:1		; initialize shadow space
+
+                                ;--- resource IDs
+
+ = 65                           IDR_MENU1	equ 101
+ = 3E9                          IDM_EXIT	equ 1001
+
+                                ;--- CStr(): macro function to define a text constant
+
+                                CStr macro text:VARARG
+ >                              local xxx
+ >                              	.const
+ >                              xxx db text,0
+ >                              	.code
+ >                              	exitm <offset xxx>
+ >                              	endm
+
+                                	.data
+00000000                    *   _DATA segment
+                            *   assume cs:ERROR
+
+00000000  576E64436C6173734E    szClass	db "WndClassName",0
+0000000D  53616D706C6500        szWnd	db "Sample",0
+
+00000000                        	.code
+00000014                    *   _DATA ends
+00000000                    *   _TEXT segment
+                            *   assume cs:FLAT
+
+                                ;*** handle WM_COMMAND 
+
+00000000                        OnCommand proc FRAME hWnd:HWND, wParam:WPARAM, lParam:LPARAM
+
+00000000  48894C2408        *   mov [rsp+16], rdx00000005  4889542410         *   push rbp
+        0000000A  55                hreg rbp
+0000                            mov rbp, rsp
+    0000000B  488BEC            .setframe rbp, 0
+                            *   .endprolog
+000000                            ov rax,wParam
+00000012                        	.if eax == IDM_EXIT
+00000012  3DE9030000        *   cmp eax , IDM_EXIT
+00000017  751D              *   jnz @C0001
+00000019                        		invoke __imp_PostMessageA, hWnd, WM_CLOSE, 0, 0
+00000019  4883EC20          *    sub rsp, 32
+0000001D  488B4D10          *    mov rcx, hWnd
+00000021  BA10000000        *    mov edx, WM_CLOSE
+00000026  4533C0            *    xor r8d, r8d
+00000029  4533C9            *    xor r9d, r9d
+0000002C  FF1500000000      *    call __imp_PostMessageA
+00000032  4883C420          *    add rsp, 32
+00000036                        	.endif
+00000036                    *   @C0001:
+00000036                        	ret
+00000036  5D                *   pop rbp
+00000037  C3                *   retn 
+00000000                    *   .xdata segment align(8) flat read 'DATA'
+00000000                    *   $xdatasym label near
+00000000  010E0205          *   db 1t + (00h shl 3), 9t, 2t, 05h + (00h shl 4)
+ 00000004  0E530B50             dw 05309h, 05006h
+ 00000008                       align 4
+ 00000008                       .xdata ends
+000000000                       .pdata segment align(4) flat read 'DATA'
+ 00000000  000000003800000000   dd imagerel OnCommand, imagerel OnCommand+033h, imagerel $xdatasym+00h
+ 0000000C                       .pdata ends
+000000038                       OnCommand endp
+
+                                ;*** window procedure
+
+00000038                        WndProc proc FRAME hWnd:HWND, message:UINT, wParam:WPARAM, lParam:LPARAM
+
+                                local	ps:PAINTSTRUCT
+
+00000038  48894C2408        *   mov [rsp+16], rdx0000003D  4889542410         *   push rbp
+        00000042  4C89442418        hreg rbp
+00000039    00000047  4C894C2420         rsp
+                0000004C  55                p, 0
+0000003C                            rsp, 80
+         0000004D  488BEC            cstack 80
+                                   dprolog
+00000040     00000050  4883EC50          message
+00000057                             eax == WM_COMMAND
+00000057  3D11010000        *   cmp eax , WM00000054  0000005C  751E              *   jnz @C0002
+0000005E                        		invoke OnCommand,hWnd,wParam,lParam
+0000005E  4883EC20          *    sub rsp, 32
+00000062  488B4D10          *    mov rcx, hWnd
+00000066  488B5520          *    mov rdx, wParam
+0000006A  4C8B4528          *    mov r8, lParam
+0000006E  E88DFFFFFF        *    call OnCommand
+00000073  4883C420          *    add rsp, 32
+00000077                        	.elseif eax == WM_SIZE
+00000077  E9D5000000        *   jmp @C0003
+0000007C                    *   @C0002:
+0000007C  83F805            *   cmp eax , WM_SIZE
+0000007F  751F              *   jnz @C0004
+00000081                        		invoke __imp_InvalidateRect, hWnd, 0, 1	;send WM_PAINT if size changes
+00000081  4883EC20          *    sub rsp, 32
+00000085  488B4D10          *    mov rcx, hWnd
+00000089  33D2              *    xor edx, edx
+0000008B  41B801000000      *    mov r8d, 1
+00000091  FF1500000000      *    call __imp_InvalidateRect
+00000097  4883C420          *    add rsp, 32
+0000009B                        	.elseif eax == WM_PAINT
+0000009B  E9B1000000        *   jmp @C0003
+000000A0                    *   @C0004:
+000000A0  83F80F            *   cmp eax , WM_PAINT
+000000A3  7575              *   jnz @C0005
+000000A5                        		invoke __imp_BeginPaint, hWnd, addr ps
+000000A5  4883EC20          *    sub rsp, 32
+000000A9  488B4D10          *    mov rcx, hWnd
+000000AD  488D55B8          *    lea rdx, ps
+000000B1  FF1500000000      *    call __imp_BeginPaint
+000000B7  4883C420          *    add rsp, 32
+000000BB                        		invoke __imp_GetClientRect, hWnd, addr ps.rcPaint
+000000BB  4883EC20          *    sub rsp, 32
+000000BF  488B4D10          *    mov rcx, hWnd
+000000C3  488D55C4          *    lea rdx, ps.rcPaint
+000000C7  FF1500000000      *    call __imp_GetClientRect
+000000CD  4883C420          *    add rsp, 32
+00000000                     1  	.const
+000000D1                    *1  _TEXT ends
+00000000                    *1  CONST segment PARA FLAT PUBLIC 'CONST'
+                            *1  assume cs:ERROR
+00000000  48656C6C6F2C20776F 1  ??0000 db "Hello, world",0
+00000000                     1  	.code
+0000000D                    *1  CONST ends
+000000D1                    *1  _TEXT segment
+                            *1  assume cs:FLAT
+000000D1                        		invoke __imp_DrawTextA, ps.hdc, offset ??0000, 12, addr ps.rcPaint, DT_CENTER or DT_VCENTER or DT_SINGLELINE
+000000D1  4883EC30          *    sub rsp, 48
+000000D5  488B4DB8          *    mov rcx, ps.hdc
+000000D9  48BA00000000000000*    mov rdx, offset ??0000
+000000E3  41B80C000000      *    mov r8d, 12
+000000E9  4C8D4DC4          *    lea r9, ps.rcPaint
+000000ED  C744242025000000  *    mov dword ptr [rsp+32], DT_CENTER or DT_VCENTER or DT_SINGLELINE
+000000F5  FF1500000000      *    call __imp_DrawTextA
+000000FB  4883C430          *    add rsp, 48
+000000FF                        		invoke __imp_EndPaint, hWnd, addr ps
+000000FF  4883EC20          *    sub rsp, 32
+00000103  488B4D10          *    mov rcx, hWnd
+00000107  488D55B8          *    lea rdx, ps
+0000010B  FF1500000000      *    call __imp_EndPaint
+00000111  4883C420          *    add rsp, 32
+00000115  4833C0                		xor rax,rax
+00000118                        	.elseif eax == WM_DESTROY
+00000118  EB37              *   jmp @C0003
+0000011A                    *   @C0005:
+0000011A  83F802            *   cmp eax , WM_DESTROY
+0000011D  7515              *   jnz @C0006
+0000011F                        		invoke __imp_PostQuitMessage, 0
+0000011F  4883EC20          *    sub rsp, 32
+00000123  33C9              *    xor ecx, ecx
+00000125  FF1500000000      *    call __imp_PostQuitMessage
+0000012B  4883C420          *    add rsp, 32
+0000012F  4833C0                		xor rax,rax
+00000132                        	.else
+00000132  EB1D              *   jmp @C0003
+00000134                    *   @C0006:
+00000134                        		invoke __imp_DefWindowProcA, hWnd, message, wParam, lParam
+00000134  4883EC20          *    sub rsp, 32
+00000138  488B4D10          *    mov rcx, hWnd
+0000013C  8B5518            *    mov edx, message
+0000013F  4C8B4520          *    mov r8, wParam
+00000143  4C8B4D28          *    mov r9, lParam
+00000147  FF1500000000      *    call __imp_DefWindowProcA
+0000014D  4883C420          *    add rsp, 32
+00000151                        	.endif
+00000151                    *   @C0003:
+00000151                        	ret
+00000151  4883C450          *   add rsp, 80
+00000155  5D                *   pop rbp
+00000156  C3                *   retn 
+00000008                    *   .xdata segment
+00000008  011C0305          *   db 1t + (00h shl 3), 13t, 3t, 05h + (00h shl 4)
+0000000C  1C9218531550      *   dw 0920dh, 05309h, 05006h
+00000012  0000              *   align 4
+00000014                    *   .xdata ends
+0000000C                    *   .pdata segment
+0000000C  000000001F01000008*   dd imagerel WndProc, imagerel WndProc+0110h, imagerel $xdatasym+08h
+00000018                    *   .pdata ends
+00000157                        WndProc endp
+
+                                ;*** InitApplication
+                                ;*** registers window class and creates main window
+
+00000157                        InitApplication proc FRAME hInstance:HINSTANCE
+
+                                local	wc:WNDCLASS
+
+00000157  48894C2408        *   push rbp
+        0000015C  55                hreg rbp
+0000                            mov rbp, rsp
+    0000015D  488BEC            .setframe rbp, 0
+                            *   sub rsp, 80
+     00000160  4883EC50          allocstack 80
+                                .endprolog
+000001                            ov wc.style,0
+0000016B  488D0500000000        	lea rax, WndProc
+00000172  488945C0              	mov wc.lpfnWndProc,rax
+00000176  C745C800000000        	mov wc.cbClsExtra,0
+0000017D  C745CC00000000        	mov wc.cbWndExtra,0
+00000184  488B4510              	mov rax,hInstance
+00000188  488945D0              	mov wc.hInstance,rax
+0000018C  48C745D800000000      	mov wc.hIcon,0
+
+00000194                        	invoke __imp_LoadCursorA, NULL, ( 32512 )
+00000194  4883EC20          *    sub rsp, 32
+00000198  33C9              *    xor ecx, ecx
+0000019A  48C7C2007F0000    *    mov rdx, ( 32512 )
+000001A1  FF1500000000      *    call __imp_LoadCursorA
+000001A7  4883C420          *    add rsp, 32
+000001AB  488945E0              	mov wc.hCursor,rax
+000001AF  48C745E806000000      	mov wc.hbrBackground,COLOR_WINDOW + 1
+000001B7  48C745F065000000      	mov wc.lpszMenuName,IDR_MENU1
+000001BF  488D0500000000        	lea rax, szClass
+000001C6  488945F8              	mov wc.lpszClassName, rax
+
+000001CA                        	invoke __imp_RegisterClassA, addr wc
+000001CA  4883EC20          *    sub rsp, 32
+000001CE  488D4DB8          *    lea rcx, wc
+000001D2  FF1500000000      *    call __imp_RegisterClassA
+000001D8  4883C420          *    add rsp, 32
+000001DC  23C0                  	and eax, eax
+000001DE  0F8485000000          	jz exit
+
+000001E4                        	invoke __imp_CreateWindowExA, NULL, addr szClass, addr szWnd,WS_OVERLAPPEDWINDOW,CW_USEDEFAULT, CW_USEDEFAULT,CW_USEDEFAULT, CW_USEDEFAULT,0,0,hInstance,0
+000001E4  4883EC60          *    sub rsp, 96
+000001E8  33C9              *    xor ecx, ecx
+000001EA  488D1500000000    *    lea rdx, szClass
+000001F1  4C8D0500000000    *    lea r8, szWnd
+000001F8  41B90000CF00      *    mov r9d, WS_OVERLAPPEDWINDOW
+000001FE  C744242000000080  *    mov dword ptr [rsp+32], CW_USEDEFAULT
+00000206  C744242800000080  *    mov dword ptr [rsp+40], CW_USEDEFAULT
+0000020E  C744243000000080  *    mov dword ptr [rsp+48], CW_USEDEFAULT
+00000216  C744243800000080  *    mov dword ptr [rsp+56], CW_USEDEFAULT
+0000021E  48C744244000000000*    mov qword ptr [rsp+64], 0
+00000227  48C744244800000000*    mov qword ptr [rsp+72], 0
+00000230  488B4510          *    mov rax, hInstance
+00000234  4889442450        *    mov [rsp+80], rax
+00000239  48C744245800000000*    mov qword ptr [rsp+88], 0
+00000242  FF1500000000      *    call __imp_CreateWindowExA
+00000248  4883C460          *    add rsp, 96
+0000024C                        	.if rax != 0
+0000024C  4885C0            *   test rax , rax 
+0000024F  7418              *   jz  @C0007
+00000251  50                    		push rax
+00000252                        		invoke __imp_ShowWindow, rax, SW_SHOWNORMAL
+00000252  4883EC20          *    sub rsp, 32
+00000256  488BC8            *    mov rcx, rax
+00000259  BA01000000        *    mov edx, SW_SHOWNORMAL
+0000025E  FF1500000000      *    call __imp_ShowWindow
+00000264  4883C420          *    add rsp, 32
+00000268  58                    		pop rax
+00000269                        	.endif
+00000269                    *   @C0007:
+00000269                        exit:
+00000269                        	ret
+00000269  4883C450          *   add rsp, 80
+0000026D  5D                *   pop rbp
+0000026E  C3                *   retn 
+00000014                    *   .xdata segment
+00000014  010D0305          *   db 1t + (00h shl 3), 8t, 3t, 05h + (00h shl 4)
+ 00000018  0D9209530650         dw 09208h, 05304h, 05001h
+ 0000001E  0000                 align 4
+ 00000020                       .xdata ends
+000000018                       .pdata segment
+ 00000018  000000001801000014   dd imagerel InitApplication, imagerel InitApplication+0113h, imagerel $xdatasym+014h
+ 00000024                       .pdata ends
+00000026F                       InitApplication endp
+
+                                ;*** WINMAIN ***
+
+0000026F                        WinMain proc FRAME hInstance:HINSTANCE, hPrevInstance:HINSTANCE, lpszCmdline:LPSTR, cmdshow:UINT
+
+                                local	msg:MSG
+                                local	hWndMain:HWND
+
+0000026F  48894C2408        *   mov [rsp+8], rcx
+00000274  55                *   push rbp
+                            *   .pushreg rbp
+00000275  488BEC            *   mov rbp, rsp
+                            *   .setframe rbp, 0
+00000278  4883EC40          *   sub rsp, 64
+                            *   .allocstack 64
+                            *   .endprolog
+0000027C                        	invoke InitApplication, hInstance
+0000027C  4883EC20          *    sub rsp, 32
+00000280  488B4D10          *    mov rcx, hInstance
+00000284  E8CEFEFFFF        *    call InitApplication
+00000289  4883C420          *    add rsp, 32
+0000028D  4823C0                	and rax, rax
+00000290  7436                  	jz exit
+00000292  488945C8              	mov hWndMain,rax
+00000296                        nextmsg:
+00000296                        	invoke __imp_GetMessageA, addr msg, 0, 0, 0
+00000296  4883EC20          *    sub rsp, 32
+0000029A  488D4DD0          *    lea rcx, msg
+0000029E  33D2              *    xor edx, edx
+000002A0  4533C0            *    xor r8d, r8d
+000002A3  4533C9            *    xor r9d, r9d
+000002A6  FF1500000000      *    call __imp_GetMessageA
+000002AC  4883C420          *    add rsp, 32
+000002B0  23C0                  	and eax, eax
+000002B2  7414                  	jz exit
+000002B4                        	invoke __imp_DispatchMessageA, addr msg
+000002B4  4883EC20          *    sub rsp, 32
+000002B8  488D4DD0          *    lea rcx, msg
+000002BC  FF1500000000      *    call __imp_DispatchMessageA
+000002C2  4883C420          *    add rsp, 32
+000002C6  EBCE                  	jmp nextmsg
+000002C8                        exit:
+000002C8  33C0                  	xor eax, eax
+000002CA                        	ret
+000002CA  4883C440          *   add rsp, 64
+000002CE  5D                *   pop rbp
+000002CF  C3                *   retn 
+00000020                    *   .xdata segment
+00000020  010D0305          *   db 1t + (00h shl 3), 13t, 3t, 05h + (00h shl 4)
+00000024  0D7209530650      *   dw 0720dh, 05309h, 05006h
+0000002A  0000              *   align 4
+0000002C                    *   .xdata ends
+00000024                    *   .pdata segment
+00000024  000000006100000020*   dd imagerel WinMain, imagerel WinMain+061h, imagerel $xdatasym+020h
+00000030                    *   .pdata ends
+000002D0                        WinMain endp
+
+
+000002D0                        WinMainCRTStartup proc FRAME
+                            *   push rbp
+  000002D0                      .pushreg rbp
+000002B8                  000002D0  4883EC20                            000002D4  33C9                                 000002D6  FF1500000000      B                        	invoke _000002DC  4883C420          
+000002BB                    *    sub rsp, 32
+000002BF                    *    xor ecx, ecx
+000002C1                    *    call __imp_GetModuleHandleA
+000002C7                    *    add rsp, 32
+000002E0                        	invoke WinMain, rax, 0, 0, 0
+000002E0  4883EC20          *    sub rsp, 32
+000002E4  488BC8            *    mov rcx, rax
+000002E7  33D2              *    xor edx, edx
+000002E9  4533C0            *    xor r8d, r8d
+000002EC  4533C9            *    xor r9d, r9d
+000002EF  E87BFFFFFF        *    call WinMain
+000002F4  4883C420          *    add rsp, 32
+000002F8                        	invoke __imp_ExitProcess, eax
+000002F8  4883EC20          *    sub rsp, 32
+000002FC  8BC8              *    mov ecx, eax
+000002FE  FF1500000000      *    call __imp_ExitProcess
+00000304  4883C420          *    add rsp, 32
+0000002C                    *   .xdata segment
+0000002C  01000000          *   db 1t + (00h shl 3), 4t, 2t, 05h + (00h shl 4)
+00000030                    *   dw 05304h00000030                              *   ali00000030                          *   .xdata end00000030  00000000380000002C   *   .pdata segment
+                            *   dd imagerel WinMainCRTStartup, imagere0000003C                    agerel $xdatasym+00000308                          *   .pdata ends
+000002F3                        WinMainCRTStartup endp
+
+                                	end WinMainCRTStartup
+00000308                    *   _TEXT ends
+
+
+Macros:
+
+                N a m e                 Type
+
+@CSTR  . . . . . . . . . . . . .        Func
+@CatStr  . . . . . . . . . . . .        Func
+@Environ . . . . . . . . . . . .        Func
+@InStr . . . . . . . . . . . . .        Func
+@SizeStr . . . . . . . . . . . .        Func
+@SubStr  . . . . . . . . . . . .        Func
+@WSTR  . . . . . . . . . . . . .        Func
+CLASS  . . . . . . . . . . . . .        Proc
+CMETHOD  . . . . . . . . . . . .        Proc
+CSTATIC  . . . . . . . . . . . .        Proc
+CStr . . . . . . . . . . . . . .        Func
+CVIRTUAL . . . . . . . . . . . .        Proc
+ENDCLASS . . . . . . . . . . . .        Proc
+ENDMETHOD  . . . . . . . . . . .        Proc
+ENDOINTERFACE  . . . . . . . . .        Proc
+EXPAND_PREFIX  . . . . . . . . .        Func
+FP10 . . . . . . . . . . . . . .        Func
+FP4  . . . . . . . . . . . . . .        Func
+FP8  . . . . . . . . . . . . . .        Func
+LOADMSD  . . . . . . . . . . . .        Proc
+LOADMSS  . . . . . . . . . . . .        Proc
+LOADPS . . . . . . . . . . . . .        Proc
+LOADSD . . . . . . . . . . . . .        Proc
+LOADSS . . . . . . . . . . . . .        Proc
+MEMALIGN . . . . . . . . . . . .        Proc
+MEMALLOC . . . . . . . . . . . .        Proc
+MEMFREE  . . . . . . . . . . . .        Proc
+METHOD . . . . . . . . . . . . .        Proc
+OINTERFACE . . . . . . . . . . .        Proc
+REPARG . . . . . . . . . . . . .        Func
+RV . . . . . . . . . . . . . . .        Func
+STATICMETHOD . . . . . . . . . .        Proc
+_ACQUIRE . . . . . . . . . . . .        Proc
+_ARRAY . . . . . . . . . . . . .        Func
+_DECLARE . . . . . . . . . . . .        Proc
+_DELETE  . . . . . . . . . . . .        Proc
+_DELETEARRAY . . . . . . . . . .        Proc
+_I . . . . . . . . . . . . . . .        Func
+_INVOKE  . . . . . . . . . . . .        Proc
+_ITEM  . . . . . . . . . . . . .        Func
+_ITEMR . . . . . . . . . . . . .        Func
+_NEW . . . . . . . . . . . . . .        Func
+_RBXNEW  . . . . . . . . . . . .        Func
+_RELEASE . . . . . . . . . . . .        Proc
+_STATIC  . . . . . . . . . . . .        Func
+_STATICREF . . . . . . . . . . .        Proc
+_V . . . . . . . . . . . . . . .        Func
+_VB  . . . . . . . . . . . . . .        Func
+_VD  . . . . . . . . . . . . . .        Func
+_VF  . . . . . . . . . . . . . .        Func
+_VINVOKE . . . . . . . . . . . .        Proc
+_VW  . . . . . . . . . . . . . .        Func
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .        GROUP
+.pdata . . . . . . . . . . . . .        64 Bit   0000003C DWord   Private 'DATA'
+.xdata . . . . . . . . . . . . .        64 Bit   00000030 QWord   Private 'DATA'
+CONST  . . . . . . . . . . . . .        64 Bit   0000000D Para    Public  'CONST'
+_DATA  . . . . . . . . . . . . .        64 Bit   00000014 Para    Public  'DATA'
+_TEXT  . . . . . . . . . . . . .        64 Bit   00000308 Para    Public  'CODE'
+
+
+Procedures, parameters and locals:
+
+                N a m e                 Type     Value    Segment  Length
+
+InitApplication  . . . . . . . .        P Near   00000157 _TEXT    00000118 Public   FASTCALL
+  hInstance  . . . . . . . . . .        Near              rbp + 0010
+  wc . . . . . . . . . . . . . .        WNDCLASSA         rbp - 0048
+  @C0007 . . . . . . . . . . . .        L Near   00000269 _TEXT
+  exit . . . . . . . . . . . . .        L Near   00000269 _TEXT
+OnCommand  . . . . . . . . . . .        P Near   00000000 _TEXT    00000038 Public   FASTCALL
+  lParam . . . . . . . . . . . .        QWord             rbp + 0020
+  wParam . . . . . . . . . . . .        QWord             rbp + 0018
+  hWnd . . . . . . . . . . . . .        Near              rbp + 0010
+  @C0001 . . . . . . . . . . . .        L Near   00000036 _TEXT
+WinMainCRTStartup  . . . . . . .        P Near   000002D0 _TEXT    00000038 Public   FASTCALL
+WndProc  . . . . . . . . . . . .        P Near   00000038 _TEXT    0000011F Public   FASTCALL
+  lParam . . . . . . . . . . . .        QWord             rbp + 0028
+  wParam . . . . . . . . . . . .        QWord             rbp + 0020
+  message  . . . . . . . . . . .        DWord             rbp + 0018
+  hWnd . . . . . . . . . . . . .        Near              rbp + 0010
+  ps . . . . . . . . . . . . . .        PAINTSTRUCT       rbp - 0048
+  @C0002 . . . . . . . . . . . .        L Near   0000007C _TEXT
+  @C0004 . . . . . . . . . . . .        L Near   000000A0 _TEXT
+  @C0003 . . . . . . . . . . . .        L Near   00000151 _TEXT
+  @C0005 . . . . . . . . . . . .        L Near   0000011A _TEXT
+  @C0006 . . . . . . . . . . . .        L Near   00000134 _TEXT
+
+
+Symbols:
+
+                N a m e                 Type       Value     Attr
+
+$xdatasym  . . . . . . . . . . .        L Near             0h .xdata FASTCALL
+??0000 . . . . . . . . . . . . .        Byte[13]           0h CONST FASTCALL
+@CodeSize  . . . . . . . . . . .        Number             0h 
+@DataSize  . . . . . . . . . . .        Number             0h 
+@Interface . . . . . . . . . . .        Number             7h 
+@Model . . . . . . . . . . . . .        Number             7h 
+@ReservedStack . . . . . . . . .        Number             0h 
+@code  . . . . . . . . . . . . .        Text   _TEXT
+@data  . . . . . . . . . . . . .        Text   FLAT
+@stack . . . . . . . . . . . . .        Text   FLAT
+IDM_EXIT . . . . . . . . . . . .        Number           3E9h 
+IDR_MENU1  . . . . . . . . . . .        Number            65h 
+WIN32_LEAN_AND_MEAN  . . . . . .        Number             1h 
+WINVER . . . . . . . . . . . . .        Number           500h 
+szClass  . . . . . . . . . . . .        Byte[13]           0h _DATA FASTCALL
+szWnd  . . . . . . . . . . . . .        Byte[7]            Dh _DATA FASTCALL
+
+WinGUI1.ASM: 152 lines, 4 passes, 40 ms, 0 warnings, 0 errors

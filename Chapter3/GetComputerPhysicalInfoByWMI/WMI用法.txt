@@ -1,0 +1,27 @@
+WMI(Windows Management Instrumentation，简称WMI)是一项Windows管理技术，是一种与语言无关的编程模型，用户可以使用WMI来管理本地和远程计算机，通过WMI可以访问、配置、管理和监视几乎所有的Windows资源，所有WMI接口都是基于COM组件对象模型。
+要使用C++创建WMI应用程序，需要以下步骤：
+1、初始化COM，因为WMI基于COM技术，所以必须执行对CoInitializeEx和CoInitializeSecurity函数的调用才能访问WMI。
+2、创建到WMI指定命名空间的连接，要创建到WMI指定命名空间的连接，需要首先调用CoCreateInstance函数创建与指定CLSID关联的类的对象，该函数在最后一个参数中返回一个IWbemLocator类对象指针，然后可以通过IWbemLocator::ConnectServer方法连接到WMI指定命名空间，IWbemLocator::ConnectServer在最后一个参数中返回一个IWbemServices类对象指针(代理)。
+3、设置WMI连接的安全级别，获取到IWbemServices代理的指针以后，必须在代理上设置安全性以通过代理访问WMI，如果没有设置适当的安全属性，则COM不允许一个进程访问另一进程，程序可以通过调用CoSetProxyBlanket函数来设置IWbemServices代理上的安全级别，在为IWbemServices代理设置安全级别以后，可以使用WMI提供的各种功能。
+4、访问WMI，例如可以通过IWbemServices::ExecQuery方法执行WQL查询语句，IWbemServices::ExecQuery在最后一个参数中返回一个IEnumWbemClassObject类对象指针(枚举器)，程序可以通过该枚举器访问查询结果。
+5、清理工作。
+
+如果需要查询其他设备的信息，更改一下IWbemServices::ExecQuery方法的WQL查询语句即可，另外IWbemClassObject::Get方法的第一个参数应该设置为需要获取的字段，例如：
+获取主板序列号：
+WQL：select * from Win32_BaseBoard where SerialNumber is not null
+重要字段：SerialNumber
+
+获取处理器CPUID：
+WQL：select * from Win32_Processor where ProcessorId is not null
+重要字段：ProcessorId
+
+获取BIOS序列号：
+WQL：select * from Win32_BIOS where SerialNumber is not null
+重要字段：SerialNumber
+
+获取网卡Mac地址：
+WQL：select * from Win32_NetworkAdapter where MACAddress is not null and not (PNPDeviceID like 'ROOT%')
+重要字段：MACAddress
+
+如果需要查询其他字段请参考：https://docs.microsoft.com/zh-cn/windows/win32/cimwin32prov/computer-system-hardware-classes
+
